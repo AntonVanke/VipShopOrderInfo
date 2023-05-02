@@ -2,7 +2,7 @@ import yaml
 from tinydb import TinyDB, where
 
 from utils.get_orders import get_order
-from utils.user_info import is_visible, user_info
+from utils.user_info import is_visible, get_user_info
 from utils.get_details import get_details
 from utils.get_browser import chrome
 from utils.get_cookie import get_qr_code, get_cookie
