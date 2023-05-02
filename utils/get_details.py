@@ -2,7 +2,7 @@ import requests
 import json
 
 
-def get_info(vip_ruid, passport_access_token, order_sn):
+def get_details(vip_ruid, passport_access_token, order_sn):
     cookies = {
         'VipRUID': f'{vip_ruid}',
         'PASSPORT_ACCESS_TOKEN': f'{passport_access_token}',
@@ -20,4 +20,6 @@ def get_info(vip_ruid, passport_access_token, order_sn):
 
     response = requests.get('https://order.vip.com/multDetail/order/info', params=params, cookies=cookies,
                             headers=headers)
-    json.dump(response.json(), open(f"{order_sn}.json", "w", encoding="utf-8"), ensure_ascii=False)
+    details = response.json()
+    return details
+    # json.dump(details, open(f"data/details-{details['result']['status']}-{order_sn}.json", "w", encoding="utf-8"), ensure_ascii=False)

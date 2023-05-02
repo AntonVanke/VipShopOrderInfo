@@ -23,5 +23,9 @@ def get_order(vip_ruid, passport_access_token, page_size=100):
         cookies=cookies,
         headers=headers,
     )
-
-    json.dump(response.json(), open(f"{passport_access_token}.json", "w", encoding="utf-8"), ensure_ascii=False)
+    # 获取订单列表
+    orders = response.json()
+    return orders
+    # json.dump(orders,
+    #           open(f"data/orders-{orders['data']['orders'][0]['orderSn']}-{passport_access_token}.json", "w",
+    #                encoding="utf-8"), ensure_ascii=False)
