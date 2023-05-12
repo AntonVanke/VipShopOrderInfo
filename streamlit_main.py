@@ -1,7 +1,9 @@
 from tinydb import TinyDB, where
 
 import streamlit as st
+from streamlit_elements import elements, mui, html, dashboard
 
+st.set_page_config(page_title="VIPShop订单整理系统", layout="wide")
 # 屏蔽掉默认组件
 hide_streamlit_style = """
             <style>
@@ -10,23 +12,16 @@ hide_streamlit_style = """
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-
 db = TinyDB("database.json")
 # 用户数据表
 users_table = db.table("users")
+orders_table = db.table("orders")
 
-
-def login():
-    # 密码输入
-    password_input = st.empty()
-    # 密码确认
-    password_button = st.empty()
-
-    password = password_input.text_input("请输入鉴权Key")
-    if password_button.button("登入"):
-        if password == "8D8735985D2054ACB4B2F93365DE4124A1F3F3FFE19E6B9C897A40E0EDC6C90D":
-            password_button.empty()
-            password_input.empty()
-        else:
-            st.error("密码错误")
-
+st.table([{
+    "id": "533372022",
+    "token": "E2AF37CD0987B4CF9B6650BDA75F7F04ECBA6B79"
+}, {
+    "id": "654654664",
+    "token": "E2AF37CD0987B4CF9B6650BDA75F7F04ECBA6B79"
+}
+])
