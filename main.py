@@ -68,6 +68,7 @@ def update_orders():
 
 
 def update_users():
+
     for _user in users.all():
         if VipShopUser(uid=_user["uid"], token=_user["token"]).is_visible():
             users.update({"status": True}, where("uid") == _user["uid"])
@@ -79,6 +80,11 @@ def update_users():
         users.update(
             {"mobile": user_info["mobile"], "username": user_info["userName"], "nickname": user_info["nickname"]},
             where("uid") == _user["uid"])
+    account_list.delete(0, tk.END)
+    for user in users.all():
+        user_nsi = {k: v for k, v in user.items() if k in ["username", "remarks", "status", "nickname"]}
+        account_list.insert(tk.END, list(user_nsi.values()))
+
     return True
 
 
@@ -95,12 +101,10 @@ root.maxsize(HEIGHT, WIDTH)
 # 创建 账户 子模块
 account = tk.LabelFrame(root, text="账号管理")
 account_list = tk.Listbox(account)
-
-for user in users.all():
-    user_nsi = {k: v for k, v in user.items() if k in ["username", "remarks", "status", "nickname"]}
-    account_list.insert(tk.END, list(user_nsi.values()))
-
+update_users()
 # 挂载
 account_list.place(x=10, y=10, width=200, height=200 - 4 * 10)
 account.place(x=10, y=10, width=WIDTH - 2 * 10, height=200)
+
+tk.Button(account, text="更新", command=update_users).pack()
 root.mainloop()
