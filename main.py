@@ -1,3 +1,4 @@
+import csv
 import time
 import tkinter as tk
 
@@ -68,7 +69,6 @@ def update_orders():
 
 
 def update_users():
-
     for _user in users.all():
         if VipShopUser(uid=_user["uid"], token=_user["token"]).is_visible():
             users.update({"status": True}, where("uid") == _user["uid"])
@@ -81,9 +81,13 @@ def update_users():
             {"mobile": user_info["mobile"], "username": user_info["userName"], "nickname": user_info["nickname"]},
             where("uid") == _user["uid"])
     account_list.delete(0, tk.END)
+
+    # 筛洗出有效信息
     for user in users.all():
         user_nsi = {k: v for k, v in user.items() if k in ["username", "remarks", "status", "nickname"]}
-        account_list.insert(tk.END, list(user_nsi.values()))
+
+        account_list.insert(tk.END,
+                            f'{user_nsi["username"]}-{user_nsi["remarks"]}-{"有效" if user_nsi["status"] else "失效"}-{user_nsi["nickname"]}')
 
     return True
 
@@ -101,10 +105,28 @@ root.maxsize(HEIGHT, WIDTH)
 # 创建 账户 子模块
 account = tk.LabelFrame(root, text="账号管理")
 account_list = tk.Listbox(account)
+
+# 更新用户信息
 update_users()
+
 # 挂载
-account_list.place(x=10, y=10, width=200, height=200 - 4 * 10)
+account_list.place(x=10, y=10, width=250, height=200 - 4 * 10)
 account.place(x=10, y=10, width=WIDTH - 2 * 10, height=200)
 
-tk.Button(account, text="更新", command=update_users).pack()
+
+def test():
+    data = update_orders()
+    with open("data.csv", "w", encoding="gbk", newline="") as f:
+        # 创建csv写入对象
+        writer = csv.DictWriter(f, fieldnames=data[0].keys())
+        # 写入表头
+        writer.writeheader()
+        # 写入数据
+        writer.writerows(data)
+    import os
+    os.system("start excel data.csv")
+
+
+tk.Button(account, text="更新列表", command=update_users).pack()
+tk.Button(account, text="导出数据", command=test).pack()
 root.mainloop()
