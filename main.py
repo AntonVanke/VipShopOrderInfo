@@ -123,10 +123,9 @@ def test():
         writer.writeheader()
         # 写入数据
         writer.writerows(data)
-    import os
-    os.system("start excel data.csv")
 
 
 tk.Button(account, text="更新列表", command=update_users).pack()
 tk.Button(account, text="导出数据", command=test).pack()
+tk.Button(account_list, text="删除", command=lambda: account_list.delete("active")).pack()
 root.mainloop()
