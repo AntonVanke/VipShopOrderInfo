@@ -2,6 +2,7 @@ import csv
 import time
 import tkinter as tk
 
+import openpyxl
 from tinydb import TinyDB, where, Query
 
 from viptool import VipShopUser, BrowserWeb
@@ -92,6 +93,57 @@ def update_users():
     return True
 
 
+def update_orders_excel():
+    """
+    导出 excel 的详细内容
+    :return:
+    """
+    data = update_orders()
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = f"截至{time.strftime('%Y-%m-%d %H.%M', time.localtime(data[0]['crawl_time']))}订单数据"
+
+    headers = ["商品编号", "商品名称", "商品规格", "商品数量", "商品价格", "订单编号", "用户编号", "订单状态",
+               "下单时间", "订单金额", "抓取时间"]
+
+    for i, header in enumerate(headers):
+        worksheet.cell(row=1, column=i + 1).value = header
+
+    # 写入数据到工作表中，从第二行开始
+    for i, item in enumerate(data):
+        # 遍历每个字典的键和值
+        for j, (key, value) in enumerate(item.items()):
+            # 写入工作表的单元格中，根据键名的顺序和值的类型
+            if key in ["order_time", "crawl_time"]:
+                worksheet.cell(row=i + 2, column=j + 1).value = time.strftime('%Y-%m-%d %H:%M', time.localtime(value))
+            else:
+                worksheet.cell(row=i + 2, column=j + 1).value = value
+
+    # 保存工作簿到文件中
+    workbook.save(f"orders-{time.strftime('%Y年%m月%d日%H时%M分', time.localtime(data[0]['crawl_time']))}.xlsx")
+
+
+def delete_user():
+    """
+    删除用户
+    :return:
+    """
+    # 获取选择的用户
+    _index = account_list.curselection()
+
+    # 判断是否选择了用户
+    if _index:
+        # 删除用户
+        users.remove(where("uid") == users.all()[_index[0]]["uid"])
+
+    # 更新用户
+    update_users()
+
+
+def update_gui_info(_):
+    pass
+
+
 # 初始化界面
 HEIGHT = 620
 WIDTH = 620
@@ -113,19 +165,12 @@ update_users()
 account_list.place(x=10, y=10, width=250, height=200 - 4 * 10)
 account.place(x=10, y=10, width=WIDTH - 2 * 10, height=200)
 
-
-def test():
-    data = update_orders()
-    with open("data.csv", "w", encoding="gbk", newline="") as f:
-        # 创建csv写入对象
-        writer = csv.DictWriter(f, fieldnames=data[0].keys())
-        # 写入表头
-        writer.writeheader()
-        # 写入数据
-        writer.writerows(data)
-
-
+# 操作按钮
 tk.Button(account, text="更新列表", command=update_users).pack()
-tk.Button(account, text="导出数据", command=test).pack()
-tk.Button(account_list, text="删除", command=lambda: account_list.delete("active")).pack()
+tk.Button(account, text="导出数据", command=update_orders_excel).pack()
+tk.Button(account, text="删除", command=delete_user).pack()
+# 信息
+tk.Label(account, text="你好").pack()
+# 列表 bind
+account_list.bind("<<ListboxSelect>>", func=lambda _: print(account_list.curselection()))
 root.mainloop()
