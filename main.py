@@ -1,14 +1,16 @@
-import csv
+import io
 import time
 import tkinter as tk
 
+import requests
 import openpyxl
+from PIL import ImageTk, Image
 from tinydb import TinyDB, where, Query
 
 from viptool import VipShopUser, BrowserWeb
 
 # TODO: 初始化浏览器
-# browser = BrowserWeb()
+browser = BrowserWeb()
 
 # 加载数据表
 db = TinyDB("database.json")
@@ -101,7 +103,7 @@ def update_orders_excel():
     data = update_orders()
     workbook = openpyxl.Workbook()
     worksheet = workbook.active
-    worksheet.title = f"截至{time.strftime('%Y-%m-%d %H.%M', time.localtime(data[0]['crawl_time']))}订单数据"
+    worksheet.title = f"截至{time.strftime('%Y-%m-%d %H.%M', time.localtime(data[-1]['crawl_time']))}订单数据"
 
     headers = ["商品编号", "商品名称", "商品规格", "商品数量", "商品价格", "订单编号", "用户编号", "订单状态",
                "下单时间", "订单金额", "抓取时间"]
@@ -120,7 +122,8 @@ def update_orders_excel():
                 worksheet.cell(row=i + 2, column=j + 1).value = value
 
     # 保存工作簿到文件中
-    workbook.save(f"orders-{time.strftime('%Y年%m月%d日%H时%M分', time.localtime(data[0]['crawl_time']))}.xlsx")
+    workbook.save(f"orders-{time.strftime('%Y年%m月%d日%H时%M分', time.localtime(data[-1]['crawl_time']))}.xlsx")
+    info.config(text=f"导出文件：orders-{time.strftime('%Y年%m月%d日%H时%M分', time.localtime(data[-1]['crawl_time']))}.xlsx")
 
 
 def delete_user():
@@ -141,7 +144,41 @@ def delete_user():
 
 
 def update_gui_info(_):
-    pass
+    # 获取选择的用户
+    _index = account_list.curselection()
+
+    # 判断是否选择了用户
+    if _index:
+        _i = users.search(where("uid") == users.all()[_index[0]]["uid"])[0]
+        info.config(
+            text=f"UID：{_i['uid']}\n电话：{_i['mobile']}\n当前状态：{'cookie有效' if _i['status'] else '请更新cookie'}\n备注：{_i['remarks']}\n添加时间：{time.strftime('%Y年%m月%d日%H时%M分', time.localtime(_i['add_time']))}\n更新时间：{time.strftime('%Y年%m月%d日%H时%M分', time.localtime(_i['update_time']))}")
+
+
+def get_qr_code():
+    global tk_pic
+    pic = requests.get(browser.get_login_url()).content
+    pic = Image.open(io.BytesIO(pic))
+    tk_pic = ImageTk.PhotoImage(pic)
+    qrcode_tk.config(image=tk_pic)
+    qrcode_tk.pack()
+    scan_success.pack()
+
+
+def get_cookie():
+    qrcode_tk.pack_forget()
+    cookie = browser.get_cookie()
+    if not cookie:
+        info.config(text="Cookie 获取失败")
+    else:
+        if not users.search(where("uid") == cookie[0]):
+            users.insert({"uid": cookie[0], "token": cookie[1], "status": True, "add_time": int(time.time()),
+                          "update_time": int(time.time()), "remarks": "备注"})
+        else:
+            users.update({"token": cookie[1], "status": True, "update_time": int(time.time())},
+                         where("uid") == cookie[0])
+
+        update_users()
+    scan_success.pack_forget()
 
 
 # 初始化界面
@@ -154,23 +191,32 @@ root.geometry(f"{HEIGHT}x{WIDTH}")
 root.minsize(HEIGHT, WIDTH)
 root.maxsize(HEIGHT, WIDTH)
 
-# 创建 账户 子模块
-account = tk.LabelFrame(root, text="账号管理")
+# 创建子模块
+account = tk.LabelFrame(root, text="ANTONVNKE")
+account_op = tk.LabelFrame(account, text="操作")
 account_list = tk.Listbox(account)
 
 # 更新用户信息
 update_users()
 
 # 挂载
-account_list.place(x=10, y=10, width=250, height=200 - 4 * 10)
-account.place(x=10, y=10, width=WIDTH - 2 * 10, height=200)
+account_list.place(x=10, y=10, width=250, height=HEIGHT - 6 * 10)
+account.place(x=10, y=10, width=WIDTH - 2 * 10, height=HEIGHT - 2 * 10)
+account_op.place(x=20 + 250, y=0, width=WIDTH - 250 - 6 * 10, height=HEIGHT - 6 * 10)
+# 信息
+info = tk.Label(account_op, text="选择用户查看信息")
+info.pack()
 
 # 操作按钮
-tk.Button(account, text="更新列表", command=update_users).pack()
-tk.Button(account, text="导出数据", command=update_orders_excel).pack()
-tk.Button(account, text="删除", command=delete_user).pack()
-# 信息
-tk.Label(account, text="你好").pack()
+tk.Button(account_op, text="更新列表", command=update_users).pack()
+tk.Button(account_op, text="导出数据", command=update_orders_excel).pack()
+tk.Button(account_op, text="删除", command=delete_user).pack()
+
+# 添加用户
+tk.Button(account_op, text="获取登录二维码", command=get_qr_code).pack()
+scan_success = tk.Button(account_op, text="我已扫码登录成功", command=get_cookie)
+qrcode_tk = tk.Label(account_op, bg='white')
+
 # 列表 bind
-account_list.bind("<<ListboxSelect>>", func=lambda _: print(account_list.curselection()))
+account_list.bind("<<ListboxSelect>>", func=update_gui_info)
 root.mainloop()
