@@ -1,6 +1,8 @@
 import time
+from functools import lru_cache
 
 import requests
+from logzero import logger, logfile
 from selenium.webdriver import Chrome, Edge
 from selenium.webdriver import ChromeOptions, EdgeOptions
 from selenium.webdriver.common.by import By
@@ -24,6 +26,7 @@ class VipShopUser:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36 Edg/111.0.1661.62',
         }
 
+    @lru_cache(None)
     def get_details(self, order_sn):
         """
         获取订单详细信息
@@ -36,9 +39,11 @@ class VipShopUser:
         }
         response = requests.get('https://order.vip.com/multDetail/order/info', params=params, cookies=self.cookies,
                                 headers=self.headers)
+        logger.debug(f"{self.uid}获取{order_sn}订单详情")
         return response.json()
 
-    def get_orders(self, page_size=20):
+    @lru_cache(None)
+    def get_orders(self, page_size=100):
         """
         获取订单
         :param page_size: 订单数 max: 100
@@ -55,16 +60,20 @@ class VipShopUser:
             headers=self.headers,
         )
         # 获取订单列表
+        logger.debug(f"{self.uid}获取订单列表")
         return response.json()
 
+    @lru_cache(None)
     def user_info(self):
         """
         获取用户信息
         :return:
         """
+        logger.debug(f"{self.uid}获取用户信息")
         response = requests.get('https://myi.vip.com/api/account/base_info', cookies=self.cookies, headers=self.headers)
         return response
 
+    @lru_cache(None)
     def is_visible(self):
         """
         判断 cookie 有效性
@@ -76,6 +85,7 @@ class VipShopUser:
         except (requests.exceptions.JSONDecodeError, KeyError):
             return False
 
+    @lru_cache(None)
     def get_user_info(self):
         return self.user_info().json()
 
@@ -94,6 +104,7 @@ class BrowserWeb:
         self.browser_options.add_argument('--disable-gpu')
         self.browser = Edge(options=self.browser_options)
         self.browser.get("https://passport.vip.com/")
+        logger.debug(f"{self.browser.name}浏览器初始化成功")
 
     def get_login_url(self):
         """
@@ -104,6 +115,7 @@ class BrowserWeb:
         self.browser.delete_all_cookies()
         self.browser.get("https://passport.vip.com/login?src=https%3A%2F%2Fwww.vip.com%2F")
         src = self.browser.find_element(By.CLASS_NAME, "J-qr-img").get_attribute("src")
+        logger.debug("获取登录二维码成功")
         # return "https://mlogin.vip.com/asserts/login/qrcode.html?" + src.split("?")[1]
         return src
 
@@ -112,6 +124,7 @@ class BrowserWeb:
         for _ in range(10):
             try:
                 if self.browser.get_cookie("VipRUID") and self.browser.get_cookie("PASSPORT_ACCESS_TOKEN"):
+                    logger.warning(f"Cookie获取成功{self.browser.get_cookie('VipRUID')['value']}")
                     return self.browser.get_cookie("VipRUID")["value"], \
                         self.browser.get_cookie("PASSPORT_ACCESS_TOKEN")[
                             "value"]
@@ -119,4 +132,5 @@ class BrowserWeb:
                 pass
             finally:
                 time.sleep(5)
+        logger.warning("Cookie获取失败")
         return False
