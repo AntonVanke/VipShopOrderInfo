@@ -1,0 +1,7 @@
+/venv/
+*.json
+*.log
+USE_LICENSE
+/build
+/dist
+*.spec
